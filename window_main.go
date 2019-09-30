@@ -64,10 +64,19 @@ func padLTS(lts []float32, historySize int) []float32 {
 func drawTargetItem(appCtx *appContext, t *target, metrics *monitor.Metrics) {
 	imgui.Text(t.Name)
 
+	if !t.Enabled {
+		imgui.SameLine()
+		imgui.Text("(Disabled)")
+		imgui.Separator()
+		return
+	}
+
 	if metrics == nil {
-		// No metrics, error?
+		// Enabled but no metrics, error?
 		if err := appCtx.InfoMap[t.Name].Error; err != nil {
+			imgui.PushStyleColor(imgui.StyleColorText, currentTheme.LatencyColors()[2])
 			imgui.Text(err.Error())
+			imgui.PopStyleColor()
 		}
 		imgui.Separator()
 		return
