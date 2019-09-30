@@ -1,0 +1,23 @@
+{
+  "ui": {
+    "font_file": "font.ttf",
+    "font_size": 15
+  },
+  "ping": {
+    "history_size": 60,
+    "interval_ms": 100,
+    "timeout_ms": 1000,
+    "latency_yellow_threshold": 100,
+    "latency_red_threshold": 200
+  },
+  "targets": [
+    {
+      "enabled": true,
+      "name": "1.1.1.1"
+    },
+    {
+      "enabled": true,
+      "name": "twitter.com"
+    }
+  ]
+}
