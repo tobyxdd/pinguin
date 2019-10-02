@@ -59,7 +59,7 @@ var defaultAppConfig = appConfig{
 func loadAppConfig() appConfig {
 	fbs, err := ioutil.ReadFile(appConfigFilename)
 	if err != nil {
-		out, _ := json.Marshal(defaultAppConfig)
+		out, _ := json.MarshalIndent(defaultAppConfig, "", "  ")
 		_ = ioutil.WriteFile(appConfigFilename, out, os.FileMode(0666))
 		return defaultAppConfig
 	}
@@ -69,4 +69,9 @@ func loadAppConfig() appConfig {
 		return defaultAppConfig
 	}
 	return c
+}
+
+func saveConfig(config appConfig) error {
+	out, _ := json.MarshalIndent(config, "", "  ")
+	return ioutil.WriteFile(appConfigFilename, out, os.FileMode(0666))
 }

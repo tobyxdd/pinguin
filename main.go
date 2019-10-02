@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/inkyblackness/imgui-go"
 	"github.com/tobyxdd/go-ping"
 	"github.com/tobyxdd/go-ping/monitor"
@@ -11,6 +12,8 @@ import (
 	"sync"
 	"time"
 )
+
+const appVersion = "1.0.0"
 
 var currentTheme theme = &lightTheme{}
 
@@ -34,7 +37,7 @@ func main() {
 	io := imgui.CurrentIO()
 
 	// Platform
-	plt, err := platform.NewGLFWPlatform(io, 300, 450, "Pinguin")
+	plt, err := platform.NewGLFWPlatform(io, 300, 450, fmt.Sprintf("Pinguin %s", appVersion))
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -124,4 +127,6 @@ func run(appCtx *appContext) {
 		appCtx.Renderer.Render(appCtx.Platform.DisplaySize(), appCtx.Platform.FramebufferSize(), imgui.RenderedDrawData())
 		appCtx.Platform.PostRender()
 	}
+
+	_ = saveConfig(appCtx.AppConfig)
 }

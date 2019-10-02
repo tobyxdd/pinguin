@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"github.com/inkyblackness/imgui-go"
+	"github.com/skratchdot/open-golang/open"
 	"github.com/tobyxdd/go-ping/monitor"
 	"math"
+	"net"
 	"os"
 )
 
@@ -17,7 +19,7 @@ var mainWindowStates struct {
 
 func mainWindow(appCtx *appContext) {
 	imgui.SetNextWindowPos(imgui.Vec2{0, 0})
-	imgui.SetNextWindowSize(imgui.Vec2{appCtx.Platform.DisplaySize()[0], appCtx.Platform.DisplaySize()[1]})
+	imgui.SetNextWindowSize(imgui.Vec2{X: appCtx.Platform.DisplaySize()[0], Y: appCtx.Platform.DisplaySize()[1]})
 	currentTheme.PushMainWindowStyle()
 
 	imgui.BeginV("Main", nil, mainWindowFlags)
@@ -31,6 +33,11 @@ func mainWindow(appCtx *appContext) {
 			imgui.EndMenu()
 		}
 		if imgui.BeginMenu("Options") {
+			if imgui.MenuItem("Edit config (Needs restarting)") {
+				_ = saveConfig(appCtx.AppConfig)
+				_ = open.Start(appConfigFilename)
+				os.Exit(0)
+			}
 			imgui.EndMenu()
 		}
 		imgui.EndMenuBar()
@@ -45,7 +52,9 @@ func mainWindow(appCtx *appContext) {
 	imgui.PushItemWidth(imgui.ContentRegionAvail().X)
 	imgui.InputText("", &mainWindowStates.AddText)
 	imgui.PopItemWidth()
-	imgui.ButtonV("Add", imgui.Vec2{imgui.ContentRegionAvail().X, 0})
+	if imgui.ButtonV("Add", imgui.Vec2{X: imgui.ContentRegionAvail().X}) {
+		addTarget(appCtx, mainWindowStates.AddText)
+	}
 
 	imgui.End()
 
@@ -61,14 +70,105 @@ func padLTS(lts []float32, historySize int) []float32 {
 	}
 }
 
+func setTargetEnableState(appCtx *appContext, name string, enabled bool) {
+	for i := range appCtx.AppConfig.Targets {
+		if appCtx.AppConfig.Targets[i].Name == name {
+			appCtx.AppConfig.Targets[i].Enabled = enabled
+		}
+	}
+	if enabled {
+		go func() {
+			addr, err := net.ResolveIPAddr("ip", name)
+
+			appCtx.InfoMapMutex.Lock()
+			if err != nil {
+				appCtx.InfoMap[name] = targetInfo{Error: err}
+				return
+			}
+			appCtx.InfoMap[name] = targetInfo{Addr: addr}
+			appCtx.InfoMapMutex.Unlock()
+
+			_ = appCtx.Monitor.AddTarget(name, *addr)
+		}()
+	} else {
+		appCtx.InfoMapMutex.Lock()
+		delete(appCtx.InfoMap, name)
+		appCtx.InfoMapMutex.Unlock()
+
+		appCtx.Monitor.RemoveTarget(name)
+	}
+}
+
+func addTarget(appCtx *appContext, name string) {
+	for i := range appCtx.AppConfig.Targets {
+		if appCtx.AppConfig.Targets[i].Name == name {
+			return
+		}
+	}
+	appCtx.AppConfig.Targets = append(appCtx.AppConfig.Targets, target{
+		Enabled: true,
+		Name:    name,
+	})
+	go func() {
+		addr, err := net.ResolveIPAddr("ip", name)
+
+		appCtx.InfoMapMutex.Lock()
+		if err != nil {
+			appCtx.InfoMap[name] = targetInfo{Error: err}
+			return
+		}
+		appCtx.InfoMap[name] = targetInfo{Addr: addr}
+		appCtx.InfoMapMutex.Unlock()
+
+		_ = appCtx.Monitor.AddTarget(name, *addr)
+	}()
+}
+
+func removeTarget(appCtx *appContext, name string) {
+	for i := range appCtx.AppConfig.Targets {
+		if appCtx.AppConfig.Targets[i].Name == name {
+			appCtx.AppConfig.Targets = append(appCtx.AppConfig.Targets[:i], appCtx.AppConfig.Targets[i+1:]...)
+			break
+		}
+	}
+	appCtx.InfoMapMutex.Lock()
+	delete(appCtx.InfoMap, name)
+	appCtx.InfoMapMutex.Unlock()
+
+	appCtx.Monitor.RemoveTarget(name)
+}
+
 func drawTargetItem(appCtx *appContext, t *target, metrics *monitor.Metrics) {
 	imgui.Text(t.Name)
+	if imgui.BeginPopupContextItemV(t.Name, 1) {
+		var switchText string
+		if t.Enabled {
+			switchText = "Disable"
+		} else {
+			switchText = "Enable"
+		}
+		if imgui.MenuItem(switchText) {
+			setTargetEnableState(appCtx, t.Name, !t.Enabled)
+		}
+		imgui.Separator()
+		if imgui.MenuItem("Remove") {
+			removeTarget(appCtx, t.Name)
+			imgui.EndPopup()
+			return
+		}
+		imgui.EndPopup()
+	}
 
 	if !t.Enabled {
 		imgui.SameLine()
 		imgui.Text("(Disabled)")
 		imgui.Separator()
 		return
+	} else {
+		if addr := appCtx.InfoMap[t.Name].Addr; addr != nil && addr.String() != t.Name {
+			imgui.SameLine()
+			imgui.Text(fmt.Sprintf("(%s)", addr.String()))
+		}
 	}
 
 	if metrics == nil {
