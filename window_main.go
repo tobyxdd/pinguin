@@ -6,7 +6,6 @@ import (
 	"github.com/skratchdot/open-golang/open"
 	"github.com/tobyxdd/go-ping/monitor"
 	"math"
-	"net"
 	"os"
 )
 
@@ -70,74 +69,6 @@ func padLTS(lts []float32, historySize int) []float32 {
 	}
 }
 
-func setTargetEnableState(appCtx *appContext, name string, enabled bool) {
-	for i := range appCtx.AppConfig.Targets {
-		if appCtx.AppConfig.Targets[i].Name == name {
-			appCtx.AppConfig.Targets[i].Enabled = enabled
-		}
-	}
-	if enabled {
-		go func() {
-			addr, err := net.ResolveIPAddr("ip", name)
-
-			appCtx.InfoMapMutex.Lock()
-			if err != nil {
-				appCtx.InfoMap[name] = targetInfo{Error: err}
-				return
-			}
-			appCtx.InfoMap[name] = targetInfo{Addr: addr}
-			appCtx.InfoMapMutex.Unlock()
-
-			_ = appCtx.Monitor.AddTarget(name, *addr)
-		}()
-	} else {
-		appCtx.InfoMapMutex.Lock()
-		delete(appCtx.InfoMap, name)
-		appCtx.InfoMapMutex.Unlock()
-
-		appCtx.Monitor.RemoveTarget(name)
-	}
-}
-
-func addTarget(appCtx *appContext, name string) {
-	for i := range appCtx.AppConfig.Targets {
-		if appCtx.AppConfig.Targets[i].Name == name {
-			return
-		}
-	}
-	appCtx.AppConfig.Targets = append(appCtx.AppConfig.Targets, target{
-		Enabled: true,
-		Name:    name,
-	})
-	go func() {
-		addr, err := net.ResolveIPAddr("ip", name)
-
-		appCtx.InfoMapMutex.Lock()
-		if err != nil {
-			appCtx.InfoMap[name] = targetInfo{Error: err}
-			return
-		}
-		appCtx.InfoMap[name] = targetInfo{Addr: addr}
-		appCtx.InfoMapMutex.Unlock()
-
-		_ = appCtx.Monitor.AddTarget(name, *addr)
-	}()
-}
-
-func removeTarget(appCtx *appContext, name string) {
-	for i := range appCtx.AppConfig.Targets {
-		if appCtx.AppConfig.Targets[i].Name == name {
-			appCtx.AppConfig.Targets = append(appCtx.AppConfig.Targets[:i], appCtx.AppConfig.Targets[i+1:]...)
-			break
-		}
-	}
-	appCtx.InfoMapMutex.Lock()
-	delete(appCtx.InfoMap, name)
-	appCtx.InfoMapMutex.Unlock()
-
-	appCtx.Monitor.RemoveTarget(name)
-}
-
 func drawTargetItem(appCtx *appContext, t *target, metrics *monitor.Metrics) {
 	imgui.Text(t.Name)
 	if imgui.BeginPopupContextItemV(t.Name, 1) {
@@ -150,7 +81,6 @@ func drawTargetItem(appCtx *appContext, t *target, metrics *monitor.Metrics) {
 		if imgui.MenuItem(switchText) {
 			setTargetEnableState(appCtx, t.Name, !t.Enabled)
 		}
-		imgui.Separator()
 		if imgui.MenuItem("Remove") {
 			removeTarget(appCtx, t.Name)
 			imgui.EndPopup()
@@ -167,7 +97,17 @@ func drawTargetItem(appCtx *appContext, t *target, metrics *monitor.Metrics) {
 	} else {
 		if addr := appCtx.InfoMap[t.Name].Addr; addr != nil && addr.String() != t.Name {
 			imgui.SameLine()
-			imgui.Text(fmt.Sprintf("(%s)", addr.String()))
+			addrString := addr.String()
+			imgui.Text(fmt.Sprintf("(%s)", addrString))
+
+			// Append to the previous menu here by using the same name
+			if imgui.BeginPopupContextItemV(t.Name, 1) {
+				imgui.Separator()
+				if imgui.MenuItem("Lookup " + addrString) {
+					_ = open.Start(fmt.Sprintf(appCtx.AppConfig.UI.IPLookupURL, addrString))
+				}
+				imgui.EndPopup()
+			}
 		}
 	}
 

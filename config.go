@@ -9,8 +9,9 @@ import (
 const appConfigFilename = "config.json"
 
 type uiConfig struct {
-	FontFile string  `json:"font_file"`
-	FontSize float32 `json:"font_size"`
+	FontFile    string  `json:"font_file"`
+	FontSize    float32 `json:"font_size"`
+	IPLookupURL string  `json:"ip_lookup_url"`
 }
 
 type pingConfig struct {
@@ -34,8 +35,9 @@ type appConfig struct {
 
 var defaultAppConfig = appConfig{
 	UI: uiConfig{
-		FontFile: "font.ttf",
-		FontSize: 15,
+		FontFile:    "font.ttf",
+		FontSize:    15,
+		IPLookupURL: "https://ip.sb/ip/%s",
 	},
 	Ping: pingConfig{
 		HistorySize:            60,
