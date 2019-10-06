@@ -95,10 +95,8 @@ func drawTargetItem(appCtx *appContext, t *target, metrics *monitor.Metrics) {
 		imgui.Separator()
 		return
 	} else {
-		if addr := appCtx.InfoMap[t.Name].Addr; addr != nil && addr.String() != t.Name {
-			imgui.SameLine()
+		if addr := appCtx.InfoMap[t.Name].Addr; addr != nil {
 			addrString := addr.String()
-			imgui.Text(fmt.Sprintf("(%s)", addrString))
 
 			// Append to the previous menu here by using the same name
 			if imgui.BeginPopupContextItemV(t.Name, 1) {
@@ -107,6 +105,11 @@ func drawTargetItem(appCtx *appContext, t *target, metrics *monitor.Metrics) {
 					_ = open.Start(fmt.Sprintf(appCtx.AppConfig.UI.IPLookupURL, addrString))
 				}
 				imgui.EndPopup()
+			}
+
+			if addr.String() != t.Name {
+				imgui.SameLine()
+				imgui.Text(fmt.Sprintf("(%s)", addrString))
 			}
 		}
 	}
