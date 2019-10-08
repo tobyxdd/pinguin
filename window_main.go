@@ -7,6 +7,7 @@ import (
 	"github.com/tobyxdd/go-ping/monitor"
 	"math"
 	"os"
+	"strings"
 )
 
 const mainWindowFlags = imgui.WindowFlagsNoTitleBar | imgui.WindowFlagsNoCollapse | imgui.WindowFlagsNoMove |
@@ -52,7 +53,10 @@ func mainWindow(appCtx *appContext) {
 	imgui.InputText("", &mainWindowStates.AddText)
 	imgui.PopItemWidth()
 	if imgui.ButtonV("Add", imgui.Vec2{X: imgui.ContentRegionAvail().X}) {
-		addTarget(appCtx, mainWindowStates.AddText)
+		tt := strings.TrimSpace(mainWindowStates.AddText)
+		if len(tt) > 0 {
+			addTarget(appCtx, tt)
+		}
 	}
 
 	imgui.End()
