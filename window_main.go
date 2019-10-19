@@ -56,6 +56,7 @@ func mainWindow(appCtx *appContext) {
 		tt := strings.TrimSpace(mainWindowStates.AddText)
 		if len(tt) > 0 {
 			addTarget(appCtx, tt)
+			mainWindowStates.AddText = ""
 		}
 	}
 
