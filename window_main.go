@@ -50,9 +50,9 @@ func mainWindow(appCtx *appContext) {
 	}
 
 	imgui.PushItemWidth(imgui.ContentRegionAvail().X)
-	imgui.InputText("", &mainWindowStates.AddText)
+	enter := imgui.InputTextV("", &mainWindowStates.AddText, imgui.InputTextFlagsEnterReturnsTrue, nil)
 	imgui.PopItemWidth()
-	if imgui.ButtonV("Add", imgui.Vec2{X: imgui.ContentRegionAvail().X}) {
+	if enter || imgui.ButtonV("Add", imgui.Vec2{X: imgui.ContentRegionAvail().X}) {
 		tt := strings.TrimSpace(mainWindowStates.AddText)
 		if len(tt) > 0 {
 			addTarget(appCtx, tt)
